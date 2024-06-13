@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Chat APP</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-QWTKZyjpPEjISv5WaRU9OFeRpok6YctnYmDr5pNlyT2bRjXh0JMhjY6hW+ALEwIH" crossorigin="anonymous">
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            background-color: #f0f2f5;
+        }
+        .chat-container {
+            width: 100%;
+            max-width: 600px;
+            background-color: #fff;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            overflow: hidden;
+        }
+        .chat-header, .chat-footer {
+            padding: .5rem;
+            background-color: #007bff;
+            color: white;
+        }
+        .chat-header {
+            text-align: center;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .chat-body {
+            padding: 1rem;
+            height: 400px;
+            overflow-y: auto;
+            background-color: #e9ecef;
+        }
+        .message {
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+        }
+        .message.self {
+            align-items: flex-end;
+        }
+        .message p {
+            margin: 0;
+        }
+        .message .content {
+            max-width: 70%;
+            padding: 0.5rem 1rem;
+            border-radius: 20px;
+            position: relative;
+        }
+        .message.self .content {
+            background-color: #007bff;
+            color: white;
+        }
+        .message.remote .content {
+            background-color: #f1f1f1;
+        }
+        .message .time {
+            font-size: 0.75rem;
+            color: #888;
+            margin-top: 0.25rem;
+        }
+        .typing-indicator {
+            font-style: italic;
+            color: #888;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header flex-column">
+            <h3>Chat App</h3>
+            <div class="d-flex flex-column gap-2 justify-content-center">
+                <span id="connectedUsers">Connected Users:</span>
+                <ul id="usersList" class="d-flex gap-2"></ul>
+            </div>
+        </div>
+        <div class="chat-body" id="messageBox"></div>
+        <div class="chat-footer">
+            <div class="input-group">
+                <input type="text" class="form-control" placeholder="Enter Room ID" id="roomId">
+                <input type="text" class="form-control" placeholder="Enter Name" id="name">
+                <input type="text" class="form-control" placeholder="Enter Message" id="message">
+                <button class="btn btn-light" id="sendBtn">Send</button>
+            </div>
+            <div class="typing-indicator text-dark" id="typingIndicator"></div>
+        </div>
+    </div>
+    <script src="/socket.io/socket.io.js"></script>
+    <script>
+        const socket = io();
+
+        const sendBtn = document.getElementById('sendBtn');
+        const message = document.getElementById('message');
+        const name = document.getElementById('name');
+        const roomId = document.getElementById('roomId');
+        const messageBox = document.getElementById('messageBox');
+        const typingIndicator = document.getElementById('typingIndicator');
+        const usersList = document.getElementById('usersList');
+
+        // Join a room
+        roomId.addEventListener('blur', () => {
+            const roomIdVal = roomId.value;
+            const nameVal = name.value;
+            socket.emit('join-room', { roomId: roomIdVal, name: nameVal });
+        });
+
+        // Listen for messages
+        socket.on("message", (data) => {
+            const { name, message, time } = data;
+            const self = name === document.getElementById('name').value;
+            const messageDiv = document.createElement('div');
+            messageDiv.classList.add('message', self ? 'self' : 'remote');
+
+            const nameDiv = document.createElement('div');
+            nameDiv.classList.add('fs-7');
+            nameDiv.innerText = self ? 'You' : name;
+
+            const contentDiv = document.createElement('div');
+            contentDiv.classList.add('content');
+            contentDiv.innerText = message;
+
+            const timeDiv = document.createElement('div');
+            timeDiv.classList.add('time');
+            timeDiv.innerText = time;
+
+            messageDiv.appendChild(nameDiv);
+            messageDiv.appendChild(contentDiv);
+            messageDiv.appendChild(timeDiv);
+
+            messageBox.appendChild(messageDiv);
+            messageBox.scrollTop = messageBox.scrollHeight;
+        });
+
+        // Send a message
+        sendBtn.addEventListener('click', () => {
+            const messageVal = message.value;
+            const nameVal = name.value;
+            const roomIdVal = roomId.value;
+            const timeVal = new Date().toLocaleTimeString();
+            socket.emit('user-message', { roomId: roomIdVal, name: nameVal, message: messageVal, time: timeVal });
+            socket.emit('stop-typing', { roomId: roomIdVal, name: nameVal });
+            message.value = '';
+        });
+
+        // Handle typing
+        let typingTimeout;
+        message.addEventListener('input', () => {
+            const nameVal = name.value;
+            const roomIdVal = roomId.value;
+            socket.emit('typing', { roomId: roomIdVal, name: nameVal });
+            clearTimeout(typingTimeout);
+            typingTimeout = setTimeout(() => {
+                socket.emit('stop-typing', { roomId: roomIdVal, name: nameVal });
+            }, 500);
+        });
+
+        // Listen for typing events
+        socket.on('typing', (data) => {
+            const { name } = data;
+            typingIndicator.innerText = `${name} is typing...`;
+        });
+
+        socket.on('stop-typing', (data) => {
+            typingIndicator.innerText = '';
+        });
+
+        // Update connected users list
+        socket.on('update-users', (users) => {
+            usersList.innerHTML = '';
+            users.forEach(user => {
+                const li = document.createElement('li');
+                li.innerText = user;
+                li.style.display = 'inline';
+                li.style.marginRight = '10px';
+                usersList.appendChild(li);
+            });
+        });
+    </script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js" integrity="sha384-YvpcrYf0tY3lHB60NNkmXc5s9fDVZLESaAA55NDzOxhy9GkcIdslK1eN7N6jIeHz" crossorigin="anonymous"></script>
+</body>
+</html>
