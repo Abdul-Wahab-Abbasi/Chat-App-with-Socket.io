@@ -38,7 +38,7 @@ This is a simple chat application built using Node.js, Express, Socket.IO, and B
 ```bash
  node index.js
  ```
-5 Open your browser and go to http://localhost:3000 to view the application.
+5 Open your browser and go to http://localhost:3000 to view the application and open the same link in remote side.
 
 ## Usage
 - Enter a unique Room ID and your Name.
