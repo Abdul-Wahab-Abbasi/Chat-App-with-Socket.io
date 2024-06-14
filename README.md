@@ -26,15 +26,19 @@ This is a simple chat application built using Node.js, Express, Socket.IO, and B
 ```bash
  git clone https://github.com/Abdul-Wahab-Abbasi/Chat-App-with-Socket.io.git
 ```
-2 Install dependencies:
+2 Go to Project Directory:
+```bash
+ cd Chat-App-with-Socket.io
+```
+3 Install dependencies:
 ```bash
  npm install
  ```
-3 Start the server:
+4 Start the server:
 ```bash
  node index.js
  ```
-4 Open your browser and go to http://localhost:3000 to view the application.
+5 Open your browser and go to http://localhost:3000 to view the application.
 
 ## Usage
 - Enter a unique Room ID and your Name.
